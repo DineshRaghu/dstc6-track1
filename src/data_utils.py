@@ -321,6 +321,13 @@ def restaurant_reco_evluation(test_preds, testA, indx2candid):
                 match=match+1
     print('Restaurant Recommendation Accuracy : ' + str(match/float(total)) +  " (" +  str(match) +  "/" + str(total) + ")") 
     
+def get_mappings(mapfile):
+    in_file = open(mapfile, 'rb')
+    dialog_id_map = ast.literal_eval(in_file[0])
+    candidate_id_map = ast.literal_eval(in_file[1])
+    candidate_dialog_map = ast.literal_eval(in_file[2])
+    return dialog_id_map, candidate_id_map, candidate_dialog_map
+
 if __name__ == '__main__':
     u = tokenize('The phone number of taj_tandoori is taj_tandoori_phone')
     print(u)
