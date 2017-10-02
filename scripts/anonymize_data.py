@@ -19,6 +19,19 @@ def build_sets():
                 cuisines.add(line_split[3])   
         in_file.close()
 
+def rank_restaurants(rank_list, rest_dict):
+    rank_map = {}
+    restaurants = set()
+    for item in rank_list:
+        restaurants.add(item[0])
+    for rest in rest_dict:
+        if "rest_name_" + str(rest_dict[rest]) not in restaurants:
+            rank_list.append(("rest_name_" + str(rest_dict[rest]), 0))
+    rank_list = sorted(rank_list, key=lambda x: x[1], reverse = True)
+    for i, item in enumerate(rank_list):
+        rank_map[item[0]] = "rest_name_" + str(i)
+    return rank_map
+
 def anonymize_data_task(inputfile, outputfile, mapfile, train):
     in_file = open(inputfile)
     out_file = open(outputfile, 'w')
@@ -43,13 +56,15 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
         data["utterances"] = []
         data["candidates"] = []
         candidate_id_map[i] = {}
+        rank_list = []
+        rank_map = {}
         if train:
             utterances_list = story['utterances'] + [story["answer"]["utterance"]]
         else:
             utterances_list = story['utterances']
         for utt in utterances_list:
-            line = utt.split()
-            if '_' in utt:
+            line = [str(x) for x in utt.split()]
+            if '_' in utt and line[0] != "api_call":
                 if '_' in line[0]:
                     rest = line[0]
                     if rest in rest_dict:
@@ -61,6 +76,9 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
                         line[2] = "phone_" + str(rest_dict[rest])
                     elif "_address" in line[1]:
                         line[2] = "address_" + str(rest_dict[rest])
+                    elif "_rating" in line[1]:
+                        rank_list.append((line[0], line[2]))
+                        continue
                 else:
                     rest = line[-1]
                     if rest in rest_dict:
@@ -68,24 +86,24 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
                     else:
                         rest_dict[rest] = len(rest_dict)
                         line[-1] = "rest_name_" + str(rest_dict[rest])
-            for i, word in enumerate(line):
+            for j, word in enumerate(line):
                 word = word.replace(',','')
                 if word in cuisines:
                     if word in cuisine_dict:
-                        line[i] = "cuisine_" + str(cuisine_dict[word])
+                        line[j] = "cuisine_" + str(cuisine_dict[word])
                     else:
                         cuisine_dict[word] = len(cuisine_dict)
-                        line[i] = "cuisine_" + str(cuisine_dict[word])
+                        line[j] = "cuisine_" + str(cuisine_dict[word])
                 elif word in locations:
                     if word in location_dict:
-                        line[i] = "location_" + str(location_dict[word])
+                        line[j] = "location_" + str(location_dict[word])
                     else:
                         location_dict[word] = len(location_dict)
-                        line[i] = "location_" + str(location_dict[word])
+                        line[j] = "location_" + str(location_dict[word])
             utt = ' '.join([str(x) for x in line])
             data["utterances"].append(utt) 
         for candidate in story['candidates']:
-            line = candidate['utterance'].split()
+            line = [str(x) for x in candidate['utterance'].split()]
             if '_' in line[-1]:
                 rest = line[-1]
                 if rest in rest_dict:
@@ -93,24 +111,39 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
                 else:
                     rest_dict[rest] = len(rest_dict)
                     line[-1] = "rest_name_" + str(rest_dict[rest])
-            for i, word in enumerate(line):
+            for j, word in enumerate(line):
                 if word in cuisines:
                     if word in cuisine_dict:
-                        line[i] = "cuisine_" + str(cuisine_dict[word])
+                        line[j] = "cuisine_" + str(cuisine_dict[word])
                     else:
                         cuisine_dict[word] = len(cuisine_dict)
-                        line[i] = "cuisine_" + str(cuisine_dict[word])
+                        line[j] = "cuisine_" + str(cuisine_dict[word])
                 elif word in locations:
                     if word in location_dict:
-                        line[i] = "location_" + str(location_dict[word])
+                        line[j] = "location_" + str(location_dict[word])
                     else:
                         location_dict[word] = len(location_dict)
-                        line[i] = "location_" + str(location_dict[word])
+                        line[j] = "location_" + str(location_dict[word])
             trans_candidate = ' '.join([str(x) for x in line])
             data["candidates"].append(trans_candidate)
-            # candidate_id_map[i][trans_candidate] = candidate["candidate_id"] 
             if candidate["candidate_id"] not in candidate_dialog_map:
                 candidate_dialog_map[candidate["candidate_id"]] = candidate["utterance"]
+        rank_map = rank_restaurants(rank_list, rest_dict)
+        for j, utt in enumerate(data["utterances"]):
+            line = [str(x) for x in utt.split()]
+            for k, word in enumerate(line):
+                if word in rank_map:
+                    line[k] = rank_map[word]
+            val = ' '.join([str(x) for x in line])
+            data["utterances"][j] = val 
+        for j, cand in enumerate(data["candidates"]):
+            line = [str(x) for x in cand.split()]
+            for k, word in enumerate(line):
+                if word in rank_map:
+                    line[k] = rank_map[word]
+            val = ' '.join([str(x) for x in line])
+            data["candidates"][j] = val 
+            candidate_id_map[i][val] = story['candidates'][j]["candidate_id"] 
         all_data.append(data)
     out_file.write(json.dumps(all_data, ensure_ascii=False))
     out_file.close()
