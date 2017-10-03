@@ -30,6 +30,8 @@ def rank_restaurants(rank_list, rest_dict):
     rank_list = sorted(rank_list, key=lambda x: x[1], reverse = True)
     for i, item in enumerate(rank_list):
         rank_map[item[0]] = "rest_name_" + str(i)
+        rank_map['phone_' + item[0].split('_')[-1]] = "phone_" + str(i)
+        rank_map['address_' + item[0].split('_')[-1]] = "address_" + str(i)
     return rank_map
 
 def anonymize_data_task(inputfile, outputfile, mapfile, train):
@@ -158,6 +160,8 @@ def anonymize_candidates(inputfile, outputfile):
     fd_in = open(inputfile, 'rb')
     fd_out = open(outputfile, 'wb')
     alreadyAdded = set()
+    cuisine_dict={}
+    location_dict={}
     for line in fd_in:
         line_split = line.split()
         if '_' in line_split[-1] and line_split[-1].endswith('_phone'):
