@@ -160,9 +160,9 @@ def anonymize_candidates(inputfile, outputfile):
     fd_in = open(inputfile, 'rb')
     fd_out = open(outputfile, 'wb')
     alreadyAdded = set()
-    cuisine_dict={}
-    location_dict={}
     for line in fd_in:
+        cuisine_list = []
+        location_list = []
         line_split = line.split()
         if '_' in line_split[-1] and line_split[-1].endswith('_phone'):
             key = ' '.join([str(x) for x in line_split[:-1]])
@@ -190,7 +190,31 @@ def anonymize_candidates(inputfile, outputfile):
                     for j in range(0,5):
                         fd_out.write("1 api_call" + ' cuisine_' + str(i) + ' location_' + str(j) + ' ' + key + '\n')
         else :
-            fd_out.write(line.strip() + '\n')
+            for i, word in enumerate(line_split):
+                if word in cuisines:
+                    cuisine_list.append(i)
+                if word in locations:
+                    location_list.append(i)
+            if len(cuisine_list) == 0 and len(location_list) == 0:
+                fd_out.write(line.strip() + '\n')
+            else:
+                key = ' '.join([str(x) for i, x in enumerate(line_split) if i not in cuisine_list and i not in location_list])
+                if key not in alreadyAdded:
+                    alreadyAdded.add(key)
+                    if len(cuisine_list) == 0:
+                        for i in range(0,5):
+                            line_split[location_list[0]] = 'location_' + str(i)
+                            fd_out.write(' '.join([str(x) for x in line_split]) + '\n')
+                    elif len(location_list) == 0:
+                        for i in range(0,5):
+                            line_split[cuisine_list[0]] = 'cuisine_' + str(i)
+                            fd_out.write(' '.join([str(x) for x in line_split]) + '\n')
+                    else:
+                        for i in range(0,5):
+                            for j in range(0,5):
+                                line_split[cuisine_list[0]] = 'cuisine_' + str(i)
+                                line_split[location_list[0]] = 'location_' + str(j)
+                                fd_out.write(' '.join([str(x) for x in line_split]) + '\n')
     fd_out.close()
 
 def anonymize_train_data():
