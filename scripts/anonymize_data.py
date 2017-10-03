@@ -75,19 +75,34 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
                         rest_dict[rest] = len(rest_dict)
                         line[0] = "rest_name_" + str(rest_dict[rest])
                     if "_phone" in line[1]:
-                        line[2] = "phone_" + str(rest_dict[rest])
+                        phone_dict[line[2]] = len(phone_dict)
+                        line[2] = "phone_" + str(phone_dict[line[2]])
                     elif "_address" in line[1]:
-                        line[2] = "address_" + str(rest_dict[rest])
+                        addr_dict[line[2]] = len(addr_dict)
+                        line[2] = "address_" + str(addr_dict[line[2]])
                     elif "_rating" in line[1]:
                         rank_list.append((line[0], line[2]))
                         continue
                 else:
                     rest = line[-1]
-                    if rest in rest_dict:
-                        line[-1] = "rest_name_" + str(rest_dict[rest])
+                    if '_phone' in rest:
+                        if rest in phone_dict:
+                            line[-1] = "phone_" + str(phone_dict[rest])
+                        else:
+                            phone_dict[rest] = len(phone_dict)
+                            line[-1] = "phone_" + str(phone_dict[rest])
+                    elif '_address' in rest:
+                        if rest in addr_dict:
+                            line[-1] = "address_" + str(addr_dict[rest])
+                        else:
+                            addr_dict[rest] = len(addr_dict)
+                            line[-1] = "address_" + str(addr_dict[rest])
                     else:
-                        rest_dict[rest] = len(rest_dict)
-                        line[-1] = "rest_name_" + str(rest_dict[rest])
+                        if rest in rest_dict:
+                            line[-1] = "rest_name_" + str(rest_dict[rest])
+                        else:
+                            rest_dict[rest] = len(rest_dict)
+                            line[-1] = "rest_name_" + str(rest_dict[rest])
             for j, word in enumerate(line):
                 word = word.replace(',','')
                 if word in cuisines:
@@ -108,11 +123,24 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
             line = [str(x) for x in candidate['utterance'].split()]
             if '_' in line[-1]:
                 rest = line[-1]
-                if rest in rest_dict:
-                    line[-1] = "rest_name_" + str(rest_dict[rest])
+                if '_phone' in rest:
+                    if rest in phone_dict:
+                        line[-1] = "phone_" + str(phone_dict[rest])
+                    else:
+                        phone_dict[rest] = len(phone_dict)
+                        line[-1] = "phone_" + str(phone_dict[rest])
+                elif '_address' in rest:
+                    if rest in addr_dict:
+                        line[-1] = "address_" + str(addr_dict[rest])
+                    else:
+                        addr_dict[rest] = len(addr_dict)
+                        line[-1] = "address_" + str(addr_dict[rest])
                 else:
-                    rest_dict[rest] = len(rest_dict)
-                    line[-1] = "rest_name_" + str(rest_dict[rest])
+                    if rest in rest_dict:
+                        line[-1] = "rest_name_" + str(rest_dict[rest])
+                    else:
+                        rest_dict[rest] = len(rest_dict)
+                        line[-1] = "rest_name_" + str(rest_dict[rest])
             for j, word in enumerate(line):
                 if word in cuisines:
                     if word in cuisine_dict:
