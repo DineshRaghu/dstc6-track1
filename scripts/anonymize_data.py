@@ -246,20 +246,20 @@ def anonymize_candidates(inputfile, outputfile):
     fd_out.close()
 
 def anonymize_train_data():
-    candidate_in = "../data/train/candidates.txt"
-    candidate_out = "../data/train/anon/candidates.txt"
-    anonymize_candidates(candidate_in, candidate_out)
     files_list = []
     files_list.append("dialog-task1API-kb1_atmosphere-distr0.5-trn10000.json")
     files_list.append("dialog-task2REFINE-kb1_atmosphere-distr0.5-trn10000.json")
     files_list.append("dialog-task3OPTIONS-kb1_atmosphere-distr0.5-trn10000.json")
     files_list.append("dialog-task4INFOS-kb1_atmosphere-distr0.5-trn10000.json")
     files_list.append("dialog-task5FULL-kb1_atmosphere-distr0.5-trn10000.json")
-    for file in files_list:
+    for i, file in enumerate(files_list):
         inputfile = "../data/train/" + file
         outputfile = "../data/train/anon/" + file
         mapfile = "../data/train/maps/" + file
         anonymize_data_task(inputfile,outputfile,mapfile,train = True)
+        candidate_in = "../data/train/candidates" + str(i+1) + ".txt"
+        candidate_out = "../data/train/anon/candidates" + str(i+1) + ".txt"
+        anonymize_candidates(candidate_in, candidate_out)
 
 def anonymize_test_data():
     files_list = []
@@ -287,9 +287,6 @@ def anonymize_test_data():
     for i, file in enumerate(files_list):
         if i % 5 == 0:
             base = "tst" + str((i+5)/5) + "/"
-            candidate_in = "../data/test/" + base + "candidates.txt"
-            candidate_out = "../data/test/" + base + "anon/candidates.txt"
-            anonymize_candidates(candidate_in, candidate_out)
         inputfile = "../data/test/" + base + file
         outputfile = "../data/test/" + base + "anon/" + file
         mapfile = "../data/test/" + base + "maps/" + file

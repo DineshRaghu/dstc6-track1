@@ -1,0 +1,23 @@
+1 here it is address_0
+1 here it is address_1
+1 here it is address_2
+1 here it is address_3
+1 here it is address_4
+1 here it is address_5
+1 here it is address_6
+1 here it is address_7
+1 here it is address_8
+1 here it is address_9
+1 here it is phone_0
+1 here it is phone_1
+1 here it is phone_2
+1 here it is phone_3
+1 here it is phone_4
+1 here it is phone_5
+1 here it is phone_6
+1 here it is phone_7
+1 here it is phone_8
+1 here it is phone_9
+1 hello what can i help you with today
+1 great let me do the reservation
+1 whenever you're ready
