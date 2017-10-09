@@ -21,14 +21,14 @@ tf.flags.DEFINE_float("max_grad_norm", 40.0, "Clip gradients to this norm.")
 tf.flags.DEFINE_integer("evaluation_interval", 10,
                         "Evaluate and print results every x epochs")
 tf.flags.DEFINE_integer("batch_size", 32, "Batch size for training.")
-tf.flags.DEFINE_integer("hops", 3, "Number of hops in the Memory Network.")
+tf.flags.DEFINE_integer("hops", 1, "Number of hops in the Memory Network.")
 tf.flags.DEFINE_integer("epochs", 200, "Number of epochs to train for.")
-tf.flags.DEFINE_integer("embedding_size", 20,
+tf.flags.DEFINE_integer("embedding_size", 32,
                         "Embedding size for embedding matrices.")
 tf.flags.DEFINE_integer("memory_size", 50, "Maximum size of memory.")
-tf.flags.DEFINE_integer("task_id", 6, "bAbI task id, 1 <= id <= 6")
+tf.flags.DEFINE_integer("task_id", 1, "bAbI task id, 1 <= id <= 5")
 tf.flags.DEFINE_integer("random_state", None, "Random state.")
-tf.flags.DEFINE_string("data_dir", "../data/sample/",
+tf.flags.DEFINE_string("data_dir", "../data/dstc6-consumable/",
                        "Directory containing DSTC6 tasks")
 tf.flags.DEFINE_string("logs_dir", "logs/",
                        "Directory to write logs")
@@ -38,12 +38,13 @@ tf.flags.DEFINE_string('loss_type', 'uniform', 'If weighted, use weighted loss f
 tf.flags.DEFINE_boolean('train', True, 'if True, begin to train')
 tf.flags.DEFINE_boolean('interactive', False, 'if True, interactive')
 tf.flags.DEFINE_boolean('OOV', False, 'if True, use OOV test set')
+tf.flags.DEFINE_boolean('match_feature_flag', False, 'if True, include match feature')
 tf.flags.DEFINE_float('loss_weight', 2.0, 'used when loss type is weighted, to bias the restaurant recommendation')
 
 FLAGS = tf.flags.FLAGS
 
 class chatBot(object):
-    def __init__(self, data_dir, model_dir, logs_dir, task_id, isInteractive=True, OOV=False, memory_size=50, random_state=None, batch_size=32, learning_rate=0.01, epsilon=1e-8, max_grad_norm=40.0, evaluation_interval=10, hops=3, epochs=200, embedding_size=20, loss_type='uniform', loss_weight=2.0):
+    def __init__(self, data_dir, model_dir, logs_dir, task_id, isInteractive=True, OOV=False, memory_size=50, random_state=None, batch_size=32, learning_rate=0.01, epsilon=1e-8, max_grad_norm=40.0, evaluation_interval=10, hops=3, epochs=200, embedding_size=20, loss_type='uniform', loss_weight=2.0, match_feature_flag= False):
         self.data_dir = data_dir
         self.task_id = task_id
         self.model_dir = model_dir
@@ -63,6 +64,7 @@ class chatBot(object):
         self.embedding_size = embedding_size
         self.loss_type = loss_type
         self.loss_weight = loss_weight
+        self.match_feature_flag = match_feature_flag
         
         if OOV:
             print("Task ", task_id, " with OOV")
@@ -135,7 +137,7 @@ class chatBot(object):
             u = tokenize(line)
             data = [(context, u, -1)]
             s, q, a, c = vectorize_data(
-                data, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates)
+                data, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates, self.match_feature_flag)
             preds,_,_ = self.model.predict(s, q, c)
             r = self.indx2candid[preds[0]]
             print(r)
@@ -150,9 +152,9 @@ class chatBot(object):
 
     def train(self):
         trainS, trainQ, trainA, trainC = vectorize_data(
-            self.trainData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates)
+            self.trainData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates, self.match_feature_flag)
         valS, valQ, valA, valC = vectorize_data(
-            self.valData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates)
+            self.valData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates, self.match_feature_flag)
         n_train = len(trainS)
         n_val = len(valS)
         print("Training Size", n_train)
@@ -213,10 +215,10 @@ class chatBot(object):
         if self.isInteractive:
             self.interactive()
         else:
-            #testS, testQ, testA, S_in_readable_form, Q_in_readable_form, last_db_results, dialogIDs  = vectorize_data_with_surface_form(
-            #    self.testData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size)
-            testS, testQ, testA, testC = vectorize_data(
-                self.testData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates)
+            testS, testQ, testA, testC, S_in_readable_form, Q_in_readable_form, last_db_results, dialogIDs  = vectorize_data_with_surface_form(
+                self.testData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates, self.match_feature_flag)
+            #testS, testQ, testA, testC = vectorize_data(
+            #    self.testData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates)
             n_test = len(testS)
             test_preds,attn_weights,ranked_candidates_list = self.batch_predict(testS, testQ, testC, n_test)
             test_acc = metrics.accuracy_score(test_preds, testA)
@@ -317,8 +319,8 @@ class chatBot(object):
                                 pred, _, _ = self.model.predict(s, q)
                             counter.append(count)
                 print("Suggestion Game Mean   :", float(sum(counter))/len(counter))
-            restaurant_reco_evluation(test_preds, testA, self.indx2candid)
-            print('Restaurant Recommendation from DB Accuracy : ' + str(match/float(total)) +  " (" +  str(match) +  "/" + str(total) + ")")
+                restaurant_reco_evluation(test_preds, testA, self.indx2candid)
+                print('Restaurant Recommendation from DB Accuracy : ' + str(match/float(total)) +  " (" +  str(match) +  "/" + str(total) + ")")
             
             print("------------------------")
 
@@ -356,19 +358,21 @@ class chatBot(object):
 
 if __name__ == '__main__':
     
-    model_dir = FLAGS.model_dir + "task" + str(FLAGS.task_id) + "_model/"
-    if FLAGS.data_dir == "../data/dialog-anonymized/":
-        loss_weight_flag = ""
-        if FLAGS.loss_type == "weighted":
-            loss_weight_flag = "-" + str(FLAGS.loss_weight)
-        model_dir = FLAGS.model_dir + "task" + str(FLAGS.task_id) + "_loss-" + str(FLAGS.loss_type) + loss_weight_flag + "_hops-" + str(FLAGS.hops) + "_model/"
+    loss_weight_flag = ""
+    if FLAGS.loss_type == "weighted":
+        loss_weight_flag = "-" + str(FLAGS.loss_weight)
+
+    match_feature_flag_str = ""
+    if FLAGS.match_feature_flag:
+        match_feature_flag_str = "_with-match-feature"
+    model_dir = FLAGS.model_dir + "task" + str(FLAGS.task_id) + "_emb-" + str(FLAGS.embedding_size) + "_loss-" + str(FLAGS.loss_type) + loss_weight_flag + "_hops-" + str(FLAGS.hops) + match_feature_flag_str + "_model/"
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     chatbot = chatBot(FLAGS.data_dir, model_dir, FLAGS.logs_dir, FLAGS.task_id, OOV=FLAGS.OOV,
                       isInteractive=FLAGS.interactive, batch_size=FLAGS.batch_size, epochs=FLAGS.epochs,
                       learning_rate = FLAGS.learning_rate, hops = FLAGS.hops, embedding_size = FLAGS.embedding_size,
-                      loss_type = FLAGS.loss_type, loss_weight=FLAGS.loss_weight)
+                      loss_type = FLAGS.loss_type, loss_weight=FLAGS.loss_weight, match_feature_flag=FLAGS.match_feature_flag)
     # chatbot.run()
     if FLAGS.train:
         chatbot.train()

@@ -82,7 +82,7 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
                         line[2] = "address_" + str(addr_dict[line[2]])
                     elif "_rating" in line[1]:
                         rank_list.append((line[0], line[2]))
-                        continue
+                    #   continue
                 else:
                     rest = line[-1]
                     if '_phone' in rest:
@@ -158,7 +158,7 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
             data["candidates"].append(trans_candidate)
             if candidate["candidate_id"] not in candidate_dialog_map:
                 candidate_dialog_map[candidate["candidate_id"]] = candidate["utterance"]
-        rank_map = rank_restaurants(rank_list, rest_dict)
+        #rank_map = rank_restaurants(rank_list, rest_dict)
         for j, utt in enumerate(data["utterances"]):
             line = [str(x) for x in utt.split()]
             for k, word in enumerate(line):

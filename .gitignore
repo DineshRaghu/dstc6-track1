@@ -107,3 +107,4 @@ events.out.*
 *.json
 *.err
 *.log
+*.txt

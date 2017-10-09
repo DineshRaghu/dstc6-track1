@@ -7,16 +7,13 @@ import tensorflow as tf
 
 stop_words=set(["a","an","the"])
 
-
 def load_candidates(data_dir, task_id):
-    assert task_id > 0 and task_id < 7
+    assert task_id > 0 and task_id < 6
     candidates=[]
     candidates_f=None
     candid_dic={}
-    if task_id==6:
-        candidates_f='dialog-babi-task6-dstc2-candidates.txt'
-    else:
-        candidates_f='dialog-babi-candidates.txt'
+    candidates_f='candidates-trn.txt'
+    #candidates_f='dialog-babi-candidates.txt'
     with open(os.path.join(data_dir,candidates_f)) as f:
         for i,line in enumerate(f):
             candid_dic[line.strip().split(' ',1)[1]] = i
@@ -31,16 +28,13 @@ def load_dialog_task(data_dir, task_id, candid_dic, isOOV):
 
     Returns a tuple containing the training and testing data for the task.
     '''
-    assert task_id > 0 and task_id < 7
+    assert task_id > 0 and task_id < 6
 
     files = os.listdir(data_dir)
     files = [os.path.join(data_dir, f) for f in files]
-    s = 'dialog-babi-task{}-'.format(task_id)
-    train_file = [f for f in files if s in f and 'trn' in f][0]
-    if isOOV:
-        test_file = [f for f in files if s in f and 'tst-OOV' in f][0]
-    else: 
-        test_file = [f for f in files if s in f and 'tst.' in f][0]
+    s = '-dialog-task{}'.format(task_id)
+    train_file = [f for f in files if s in f and 'train' in f][0]
+    test_file = [f for f in files if s in f and 'tst_1' in f][0]
     val_file = [f for f in files if s in f and 'dev' in f][0]
     train_data = get_dialogs(train_file,candid_dic)
     test_data = get_dialogs(test_file,candid_dic)
@@ -171,7 +165,7 @@ def vectorize_candidates(candidates,word_idx,sentence_size):
     return tf.constant(C,shape=shape)
 
 
-def vectorize_data(data, word_idx, sentence_size, batch_size, candidates_size, max_memory_size, candidates):
+def vectorize_data(data, word_idx, sentence_size, batch_size, candidates_size, max_memory_size, candidates, match_feature_flag):
     """
     Vectorize stories and queries.
 
@@ -223,19 +217,19 @@ def vectorize_data(data, word_idx, sentence_size, batch_size, candidates_size, m
 
             extra_feature_len=0
             match_feature=[]
-            if candidate_vocab == story_query_vocab:
+            if candidate_vocab <= story_query_vocab and len(candidate_vocab) > 0 and match_feature_flag:
                 extra_feature_len=1
                 match_feature.append(word_idx['MATCH_ATMOSPHERE_RESTRICTION'])
             lc=max(0,sentence_size-len(candidate)-extra_feature_len)
             c.append([word_idx[w] if w in word_idx else 0 for w in candidate] + [0] * lc + match_feature)
-
+           
         S.append(np.array(ss))
         Q.append(np.array(q))
         A.append(np.array(answer))
         C.append(np.array(c))
     return S, Q, A, C
 
-def vectorize_data_with_surface_form(data, word_idx, sentence_size, batch_size, candidates_size, max_memory_size):
+def vectorize_data_with_surface_form(data, word_idx, sentence_size, batch_size, candidates_size, max_memory_size, candidates, match_feature_flag):
     """
     Vectorize stories and queries.
 
@@ -246,9 +240,13 @@ def vectorize_data_with_surface_form(data, word_idx, sentence_size, batch_size, 
 
     The answer array is returned as a one-hot encoding.
     """
+
+    atmosphere_restriction_set={'casual','romantic','business','glutenfree','vegan','vegetarian'}
+    
     S = []
     Q = []
     A = []
+    C = []
     S_in_readable_form = []
     Q_in_readable_form = []
     dialogIDs = []
@@ -260,6 +258,7 @@ def vectorize_data_with_surface_form(data, word_idx, sentence_size, batch_size, 
             memory_size=max(1,min(max_memory_size,len(story)))
         ss = []
         story_string = []
+        story_query_vocab = set()
 
         dbentries =set([])
         dbEntriesRead=False
@@ -268,6 +267,8 @@ def vectorize_data_with_surface_form(data, word_idx, sentence_size, batch_size, 
         for i, sentence in enumerate(story, 1):
             ls = max(0, sentence_size - len(sentence))
             ss.append([word_idx[w] if w in word_idx else 0 for w in sentence] + [0] * ls)
+            for w in sentence:
+                story_query_vocab.add(w)
 
             story_element = ' '.join([str(x) for x in sentence[:-2]])
             # if the story element is a database response/result
@@ -293,13 +294,31 @@ def vectorize_data_with_surface_form(data, word_idx, sentence_size, batch_size, 
         for _ in range(lm):
             ss.append([0] * sentence_size)
 
-
         lq = max(0, sentence_size - len(query))
         q = [word_idx[w] if w in word_idx else 0 for w in query] + [0] * lq
-        
+        for w in query:
+            story_query_vocab.add(w)
+        story_query_vocab = story_query_vocab.intersection(atmosphere_restriction_set)
+
+        c = []
+        for j,candidate in enumerate(candidates):
+            candidate_vocab = set()
+            for w in candidate:
+                candidate_vocab.add(w)
+            candidate_vocab = candidate_vocab.intersection(atmosphere_restriction_set)
+
+            extra_feature_len=0
+            match_feature=[]
+            if candidate_vocab == story_query_vocab and len(candidate_vocab) > 0 and match_feature_flag:
+                extra_feature_len=1
+                match_feature.append(word_idx['MATCH_ATMOSPHERE_RESTRICTION'])
+            lc=max(0,sentence_size-len(candidate)-extra_feature_len)
+            c.append([word_idx[w] if w in word_idx else 0 for w in candidate] + [0] * lc + match_feature)
+            
         S.append(np.array(ss))
         Q.append(np.array(q))
         A.append(np.array(answer))
+        C.append(np.array(c))
 
         S_in_readable_form.append(story_string)
         Q_in_readable_form.append(' '.join([str(x) for x in query]))
@@ -307,7 +326,7 @@ def vectorize_data_with_surface_form(data, word_idx, sentence_size, batch_size, 
 
         dialogIDs.append(dialog_id)
 
-    return S, Q, A, S_in_readable_form, Q_in_readable_form, last_db_results, dialogIDs
+    return S, Q, A, C, S_in_readable_form, Q_in_readable_form, last_db_results, dialogIDs
 
 def restaurant_reco_evluation(test_preds, testA, indx2candid):
     total = 0
