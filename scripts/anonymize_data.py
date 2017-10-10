@@ -288,14 +288,20 @@ def anonymize_test_data():
     files_list.append("dialog-task4INFOS-kb2_atmosphere_restrictions-distr0.5-tst1000.json")
     files_list.append("dialog-task5FULL-kb2_atmosphere_restrictions-distr0.5-tst1000.json")
     for i, file in enumerate(files_list):
+        task = i % 5 + 1
         if i % 5 == 0:
             base = "tst" + str((i+5)/5) + "/"
         inputfile = "../data/test/" + base + file
         outputfile = "../data/test/" + base + "anon/" + file
         mapfile = "../data/test/" + base + "maps/" + file
         anonymize_data_task(inputfile,outputfile,mapfile,train = False)
+        if i < 10:
+            continue
+        candidate_in = "../data/test/" + base + "candidates" + str(task) + ".txt"
+        candidate_out = "../data/test/anon" + base + "candidates" + str(task) + ".txt"
+        anonymize_candidates(candidate_in, candidate_out)
 
 if __name__ == '__main__':
     build_sets()
     anonymize_train_data()
-    #anonymize_test_data()
+    anonymize_test_data()
