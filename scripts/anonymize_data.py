@@ -260,6 +260,9 @@ def anonymize_train_data():
         candidate_in = "../data/train/candidates" + str(i+1) + ".txt"
         candidate_out = "../data/train/anon/candidates" + str(i+1) + ".txt"
         anonymize_candidates(candidate_in, candidate_out)
+    candidate_in_all = "../data/train/candidates.txt"
+    candidate_out_all = "../data/train/anon/candidates.txt"
+    anonymize_candidates(candidate_in_all, candidate_out_all)
 
 def anonymize_test_data():
     files_list = []
@@ -295,4 +298,4 @@ def anonymize_test_data():
 if __name__ == '__main__':
     build_sets()
     anonymize_train_data()
-    anonymize_test_data()
+    #anonymize_test_data()

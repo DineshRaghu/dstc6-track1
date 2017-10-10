@@ -38,7 +38,7 @@ tf.flags.DEFINE_string('loss_type', 'uniform', 'If weighted, use weighted loss f
 tf.flags.DEFINE_boolean('train', True, 'if True, begin to train')
 tf.flags.DEFINE_boolean('interactive', False, 'if True, interactive')
 tf.flags.DEFINE_boolean('OOV', False, 'if True, use OOV test set')
-tf.flags.DEFINE_boolean('match_feature_flag', False, 'if True, include match feature')
+tf.flags.DEFINE_boolean('match_feature_flag', True, 'if True, include match feature')
 tf.flags.DEFINE_float('loss_weight', 2.0, 'used when loss type is weighted, to bias the restaurant recommendation')
 
 FLAGS = tf.flags.FLAGS

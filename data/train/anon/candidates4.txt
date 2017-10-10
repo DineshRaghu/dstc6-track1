@@ -19,5 +19,5 @@
 1 here it is phone_8
 1 here it is phone_9
 1 hello what can i help you with today
-1 great let me do the reservation
 1 whenever you're ready
+1 great let me do the reservation

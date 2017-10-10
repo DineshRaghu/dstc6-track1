@@ -12,8 +12,8 @@ def load_candidates(data_dir, task_id):
     candidates=[]
     candidates_f=None
     candid_dic={}
-    candidates_f='candidates-trn.txt'
-    #candidates_f='dialog-babi-candidates.txt'
+    candidates_f='candidates.txt'
+    #candidates_f='candidates' + str(task_id) + '.txt'
     with open(os.path.join(data_dir,candidates_f)) as f:
         for i,line in enumerate(f):
             candid_dic[line.strip().split(' ',1)[1]] = i
@@ -34,7 +34,7 @@ def load_dialog_task(data_dir, task_id, candid_dic, isOOV):
     files = [os.path.join(data_dir, f) for f in files]
     s = '-dialog-task{}'.format(task_id)
     train_file = [f for f in files if s in f and 'train' in f][0]
-    test_file = [f for f in files if s in f and 'tst_1' in f][0]
+    test_file = [f for f in files if s in f and 'dev' in f][0]
     val_file = [f for f in files if s in f and 'dev' in f][0]
     train_data = get_dialogs(train_file,candid_dic)
     test_data = get_dialogs(test_file,candid_dic)
@@ -106,7 +106,7 @@ def parse_dialogs_per_response(lines,candid_dic):
     context=[]
     u=None
     r=None
-    dialog_id=1
+    dialog_id=0
     for line in lines:
         line=line.strip()
         if line:

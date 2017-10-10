@@ -35,7 +35,34 @@ if __name__ == '__main__':
 					devfile = open(devfilePath,'w')
 				
 				outfile = open(outfilePath,'w')
-				
+				utt_count_arr = []
+
+				for i in range(len(infileJson)):
+					#print(str(i))
+					utt_json = infileJson[i]['utterances']
+
+					utt_count = 0
+					j = 0
+					
+					while j < len(utt_json):
+						utt = utt_json[j]
+						if not(utt.startswith('rest_name_')):
+							utt_count+=1
+							j += 1
+						j += 1
+					utt_count_arr.append(utt_count)
+				count_map = dict((x,utt_count_arr.count(x)) for x in set(utt_count_arr))
+				total = 0
+				length_to_consider = 0
+				#for key, value in count_map.iteritems():
+				#	print(str(key) + "\t" + str(value))
+				for key, value in count_map.iteritems():
+					total+=value
+					if total > 8000:
+						length_to_consider = key
+						break
+					
+
 				for i in range(len(infileJson)):
 					utt_json = infileJson[i]['utterances']
 
@@ -55,31 +82,22 @@ if __name__ == '__main__':
 							utt_count+=1
 							dialog_str = dialog_str + str(lineNo) + ' ' + utt + '\t'
 							if j+1 < len(utt_json):
-								if 'api_call' in utt_json[j+1]:
-									api_call_count+=1
-								if 'here it is' in utt_json[j+1]:
-									here_it_is_count+=1
-								last_line = utt_json[j+1]
 								dialog_str = dialog_str + utt_json[j+1] + '\n'
 							else:
-								dialog_str = dialog_str + "i am sorry, i don't have an answer to that question\n"
+								dialog_str = dialog_str + "foo bar\n"
 							j += 1
 						lineNo=lineNo+1
 						j += 1
 					
 					dialog_str = dialog_str + '\n'
-					
 					if subfolder_idx == 0:
-						if (task_id == 1 and api_call_count == 1) or (task_id == 2 and api_call_count == 2) or (task_id == 3 and 'great let me do the reservation' in last_line):
-							dialogList.append(dialog_str)
-						if task_id == 5 and here_it_is_count > 0:
-							dialogList.append(dialog_str)
-						if task_id == 4:
+						if utt_count >= length_to_consider:
 							dialogList.append(dialog_str)
 					else:
 						dialogList.append(dialog_str)
 					
 				if subfolder_idx == 0:
+					print(str(len(dialogList)))
 					for i in range(len(dialogList)):
 						if i < int(len(dialogList)*0.9):
 							outfile.write(dialogList[i])
@@ -89,5 +107,6 @@ if __name__ == '__main__':
 				else:
 					for i in range(len(dialogList)):
 						outfile.write(dialogList[i])
+				
 				outfile.close()
 					
