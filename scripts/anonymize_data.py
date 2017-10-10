@@ -298,7 +298,7 @@ def anonymize_test_data():
         if i < 10:
             continue
         candidate_in = "../data/test/" + base + "candidates" + str(task) + ".txt"
-        candidate_out = "../data/test/anon" + base + "candidates" + str(task) + ".txt"
+        candidate_out = "../data/test/anon/" + "candidates" + str(task) + "_" + "tst" + str((i+5)/5) + ".txt"
         anonymize_candidates(candidate_in, candidate_out)
 
 if __name__ == '__main__':

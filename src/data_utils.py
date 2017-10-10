@@ -38,7 +38,7 @@ def load_test_candidates(data_dir, task_id, test_id):
     if test_id == 1 or test_id == 2:
         candidates_f='candidates' + str(task_id) + '.txt'
     else:
-        candidates_f='candidates-ext' + str(task_id) + '.txt'
+        candidates_f='candidates' + str(task_id) + '_tst'+ str(test_id) + '.txt'
     
     with open(os.path.join(data_dir,candidates_f)) as f:
         for i,line in enumerate(f):

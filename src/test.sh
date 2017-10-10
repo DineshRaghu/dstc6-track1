@@ -1,0 +1,17 @@
+python single_dialog.py --train False --task_id 1 --embedding_size 32 --hops 1 --epochs 2000 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 1 --embedding_size 32 --hops 1 --epochs 2000 >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 2 --embedding_size 32 --hops 1 --epochs 2000 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 2 --embedding_size 32 --hops 1 --epochs 2000 >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 3 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 4.0 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 3 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 8.0 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 3 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 16.0 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 3 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 4.0 >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 3 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 8.0 >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 3 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 16.0 >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 4 --embedding_size 32 --hops 2 --epochs 2000 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 5 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 4.0 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 5 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 8.0 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 5 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 16.0 --match_feature_flag False >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 5 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 4.0 >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 5 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 8.0 >> logs/test_accuracies.log 2>> logs/single_dialog.err
+python single_dialog.py --train False --task_id 5 --embedding_size 32 --hops 3 --epochs 2000 --loss_type weighted --loss_weight 16.0 >> logs/test_accuracies.log 2>> logs/single_dialog.err

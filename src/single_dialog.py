@@ -309,7 +309,8 @@ class chatBot(object):
             print("------------------------")
 
     def dstc_test(self):
-        for i in range(2):
+        print("")
+        for i in range(4):
             test_id = i+1
             print("Test ID : ", test_id)
             dstc_test_data = load_dialog_test_data(self.data_dir, self.task_id, test_id)
@@ -318,6 +319,7 @@ class chatBot(object):
             print("Candidate Size : ", dstc_n_cand)
             dstc_indx2candid = dict((dstc_candid2indx[key], key) for key in dstc_candid2indx)
             self.dstc_test_per_test_id(dstc_test_data, dstc_candidates, dstc_indx2candid, test_id)
+            sys.stdout.flush()
 
     def batch_predict(self, S, Q, C, n):
         preds = []
