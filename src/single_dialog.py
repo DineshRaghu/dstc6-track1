@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from data_utils import load_dialog_task, vectorize_data, load_candidates, vectorize_candidates, vectorize_data_with_surface_form, vectorize_candidates_sparse, tokenize, restaurant_reco_evluation
+from data_utils import load_dialog_task, vectorize_data, load_candidates, load_test_candidates, vectorize_candidates, vectorize_data_with_surface_form, vectorize_candidates_sparse, tokenize, restaurant_reco_evluation, load_dialog_test_data
 from sklearn import metrics
 from memn2n import MemN2NDialog
 from itertools import chain
@@ -69,7 +69,11 @@ class chatBot(object):
         if OOV:
             print("Task ", task_id, " with OOV")
         else:
-            print("Task ", task_id)
+            print_str = ""
+            print_str += ("Task " + str(task_id) + " (loss " + loss_type )
+            if loss_type == "weighted":
+                print_str += (", weight " + str(loss_weight))
+            print(print_str + ")")
         print("")
         self.candidates, self.candid2indx = load_candidates(
             self.data_dir, self.task_id)
@@ -177,8 +181,8 @@ class chatBot(object):
                 cost_t = self.model.batch_fit(s, q, a, a_type, c)
                 total_cost += cost_t
             if t % self.evaluation_interval == 0:
-                train_preds,_,_ = self.batch_predict(trainS, trainQ, trainC, n_train)
-                val_preds,_,_ = self.batch_predict(valS, valQ, valC, n_val)
+                train_preds,_,_,_ = self.batch_predict(trainS, trainQ, trainC, n_train)
+                val_preds,_,_,_ = self.batch_predict(valS, valQ, valC, n_val)
                 train_acc = metrics.accuracy_score(
                     np.array(train_preds), trainA)
                 val_acc = metrics.accuracy_score(val_preds, valA)
@@ -220,41 +224,22 @@ class chatBot(object):
             #testS, testQ, testA, testC = vectorize_data(
             #    self.testData, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, self.candidates)
             n_test = len(testS)
-            test_preds,attn_weights,ranked_candidates_list = self.batch_predict(testS, testQ, testC, n_test)
+            test_preds,attn_weights,ranked_candidates_list,log_prob = self.batch_predict(testS, testQ, testC, n_test)
             test_acc = metrics.accuracy_score(test_preds, testA)
             match=0
             total=0
             all_data_points=[]
             for idx, val in enumerate(test_preds):
-                answer = self.indx2candid[testA[idx].item(0)]
+                #answer = self.indx2candid[testA[idx].item(0)]
                 data_point={}
                 context=[]
                 for _, element in enumerate(S_in_readable_form[idx]):
                     context.append(element)
                 data_point['context']=context
                 data_point['query']=Q_in_readable_form[idx]
-                data_point['answer']=answer
+                #data_point['answer']=answer
                 data_point['prediction']=self.indx2candid[val]
                 data_point['dialog-id']=dialogIDs[idx]
-
-                if len(S_in_readable_form[idx]) <= 500:
-                    for hop_index in range(0, self.hops):
-                        attn_tuples_list = []
-                        attn_arr = attn_weights[hop_index][idx]
-                        for mem_index in range(0, len(attn_arr)):
-                            if(mem_index > len(S_in_readable_form[idx])-1):
-                                attn_tuples_list.append((mem_index, attn_arr[mem_index], "NONE"))
-                            else:
-                                if(len(S_in_readable_form[idx]) > 50):
-                                    attn_tuples_list.append((mem_index, attn_arr[mem_index], S_in_readable_form[idx][len(S_in_readable_form[idx])-50+mem_index]))
-                                else:
-                                    attn_tuples_list.append((mem_index, attn_arr[mem_index], S_in_readable_form[idx][mem_index]))
-                        sorted_tuple = sorted(attn_tuples_list, key=itemgetter(1), reverse=True)
-                        attn_list=[]
-                        for tuple_idx in range(0, 10):
-                            if len(sorted_tuple) > tuple_idx and sorted_tuple[tuple_idx][1] > 0.001:
-                                attn_list.append(str(sorted_tuple[tuple_idx][1]) + ' : ' + sorted_tuple[tuple_idx][2])
-                        data_point['attn-hop-' + str(hop_index)]=attn_list
                 
                 ranked_candidateids = ranked_candidates_list[idx]
                 ranked_candidates = []
@@ -262,20 +247,6 @@ class chatBot(object):
                     ranked_candidates.append(self.indx2candid[ranked_candidateids[i]])
                 data_point['ranked-candidates']=ranked_candidates
                 all_data_points.append(data_point)
-
-                if self.task_id==3 and "what do you think of this option:" in answer :
-                    dbset=set()
-                    if self.task_id==3:
-                        splitstr=last_db_results[idx].split( )
-                        for i in range(2, len(splitstr)):
-                            dbset.add(splitstr[i][:splitstr[i].index('(')])
-                            
-                    total = total+1
-                    pred_str=self.indx2candid[val]
-                    if "what do you think of this option:" in pred_str:
-                        pred_restaurant=pred_str[34:].strip()
-                        if pred_restaurant in dbset:
-                            match=match+1
             
             file_prefix = self.logs_dir + 'task-'+str(self.task_id)+ '_hops-' + str(self.hops) + '_loss-' +str(self.loss_type)
             if self.loss_type == "weighted":
@@ -290,44 +261,69 @@ class chatBot(object):
             print("Test Size      : ", n_test)
             print("Test Accuracy  : ", test_acc)
 
-            if self.task_id==3:
-                counter = []
-                query1 = ['no', 'this', 'does', 'not', 'work', 'for', 'me', '$u', '#0']
-                query2 = ['sure', 'let', 'me', 'find', 'other', 'option', 'for', 'you', '$r', '#0']
-                for idx in range(0, n_test):
-                    answer = self.indx2candid[testA[idx].item(0)]
-                    if len(answer) > 0:
-                        last = str(answer)
-                        if 'what do you think of this option' in last:
-                            count = 1
-                            s = testS[idx:idx+1]
-                            q = testQ[idx:idx+1]
-                            a = testA[idx]
-                            pred, _, _ = self.model.predict(s, q)
-                            turn = S_in_readable_form[idx][-1]
-                            turn_no = int(turn.split('#')[1].split(' ')[0])
-                            while pred.item(0) != a and count < 100:
-                                turn_no += 1
-                                turn_element = "#" + str(turn_no)
-                                query1[-1] = (turn_element)
-                                query2[-1] = (turn_element)
-                                query1_hash = [self.word_idx[w] if w in self.word_idx else 0 for w in query1] + [0] * (self.sentence_size - len(query1))
-                                query2_hash = [self.word_idx[w] if w in self.word_idx else 0 for w in query2] + [0] * (self.sentence_size - len(query2))
-                                request_query_append = np.array([query1_hash, query2_hash])
-                                s = [np.concatenate((s[0], request_query_append))]
-                                count += 1                   
-                                pred, _, _ = self.model.predict(s, q)
-                            counter.append(count)
-                print("Suggestion Game Mean   :", float(sum(counter))/len(counter))
-                restaurant_reco_evluation(test_preds, testA, self.indx2candid)
-                print('Restaurant Recommendation from DB Accuracy : ' + str(match/float(total)) +  " (" +  str(match) +  "/" + str(total) + ")")
-            
             print("------------------------")
+
+    def dstc_test_per_test_id(self, dstc_test_data, dstc_candidates, dstc_indx2candid, test_id):
+        ckpt = tf.train.get_checkpoint_state(self.model_dir)
+        if ckpt and ckpt.model_checkpoint_path:
+            self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+        else:
+            print("...no checkpoint found...")
+        if self.isInteractive:
+            self.interactive()
+        else:
+            #testS, testQ, testA, testC = vectorize_data(
+            #   dstc_test_data, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, dstc_candidates, self.match_feature_flag)
+            testS, testQ, testA, testC, S_in_readable_form, Q_in_readable_form, last_db_results, dialogIDs  = vectorize_data_with_surface_form(
+                dstc_test_data, self.word_idx, self.sentence_size, self.batch_size, self.n_cand, self.memory_size, dstc_candidates, self.match_feature_flag)
+            
+            n_test = len(testS)
+            test_preds,_,ranked_candidates_list, log_prob = self.batch_predict(testS, testQ, testC, n_test)
+            all_data_points=[]
+            for idx, val in enumerate(test_preds):
+                data_point={}
+                data_point['dialog-id']=dialogIDs[idx]
+
+                ranked_candidateids = ranked_candidates_list[idx]
+                log_prob_distr = log_prob[idx]
+                ranked_candidates = []
+                scores = []
+                for i in range(len(ranked_candidateids)):
+                    ranked_candidates.append(dstc_indx2candid[ranked_candidateids[i]])
+                    scores.append(str(log_prob_distr[ranked_candidateids[i]]))
+                data_point['ranked-candidates']=ranked_candidates
+                data_point['scores']=scores
+                all_data_points.append(data_point)
+            
+            file_prefix = self.logs_dir + 'task-'+str(self.task_id)+ '_tst-'+str(test_id)+ '_hops-' + str(self.hops) + '_loss-' +str(self.loss_type)
+            if self.loss_type == "weighted":
+                file_prefix = file_prefix + '-'+str(self.loss_weight)
+            if self.match_feature_flag == True:
+                file_prefix = file_prefix + 'with-mf' 
+            file_to_dump_json=  file_prefix + '.json'
+            
+            with open(file_to_dump_json, 'w') as f:
+                json.dump(all_data_points, f, indent=4)
+
+            print("Test Size      : ", n_test)
+            print("------------------------")
+
+    def dstc_test(self):
+        for i in range(2):
+            test_id = i+1
+            print("Test ID : ", test_id)
+            dstc_test_data = load_dialog_test_data(self.data_dir, self.task_id, test_id)
+            dstc_candidates, dstc_candid2indx = load_test_candidates(self.data_dir, self.task_id, test_id)
+            dstc_n_cand = len(dstc_candidates)
+            print("Candidate Size : ", dstc_n_cand)
+            dstc_indx2candid = dict((dstc_candid2indx[key], key) for key in dstc_candid2indx)
+            self.dstc_test_per_test_id(dstc_test_data, dstc_candidates, dstc_indx2candid, test_id)
 
     def batch_predict(self, S, Q, C, n):
         preds = []
         attn_weights = []
         ranked_candidates_list = []
+        log_prob_list = []
         for k in range(0,self.hops):
             attn_weights.append([])
         for start in range(0, n, self.batch_size):
@@ -335,12 +331,13 @@ class chatBot(object):
             s = S[start:end]
             q = Q[start:end]
             c = C[start:end]
-            pred, attn_arr, ranked_candidates = self.model.predict(s, q, c)
+            pred, attn_arr, ranked_candidates, log_prob = self.model.predict(s, q, c)
             preds += list(pred)
             for k in range(0,self.hops):
                 attn_weights[k].extend(attn_arr[k])
             ranked_candidates_list.extend(ranked_candidates)
-        return preds,attn_weights,ranked_candidates_list
+            log_prob_list.extend(log_prob)
+        return preds,attn_weights,ranked_candidates_list,log_prob_list
 
     def classify_dialogs(self, A):
         answer_type = []
@@ -374,8 +371,11 @@ if __name__ == '__main__':
                       learning_rate = FLAGS.learning_rate, hops = FLAGS.hops, embedding_size = FLAGS.embedding_size,
                       loss_type = FLAGS.loss_type, loss_weight=FLAGS.loss_weight, match_feature_flag=FLAGS.match_feature_flag)
     # chatbot.run()
+    
     if FLAGS.train:
         chatbot.train()
     else:
         chatbot.test()
+    
+    #chatbot.dstc_test()
     chatbot.close_session()

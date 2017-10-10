@@ -12,8 +12,34 @@ def load_candidates(data_dir, task_id):
     candidates=[]
     candidates_f=None
     candid_dic={}
-    candidates_f='candidates.txt'
-    #candidates_f='candidates' + str(task_id) + '.txt'
+    #candidates_f='candidates.txt'
+    candidates_f='candidates' + str(task_id) + '.txt'
+    with open(os.path.join(data_dir,candidates_f)) as f:
+        for i,line in enumerate(f):
+            candid_dic[line.strip().split(' ',1)[1]] = i
+            line=tokenize(line.strip())[1:]
+            candidates.append(line)
+    # return candidates,dict((' '.join(cand),i) for i,cand in enumerate(candidates))
+    return candidates,candid_dic
+
+def load_test_candidates(data_dir, task_id, test_id):
+    assert task_id > 0 and task_id < 6
+    candidates=[]
+    candidates_f=None
+    candid_dic={}
+    
+    '''
+    if test_id == 1 or test_id == 2:
+        candidates_f='candidates.txt'
+    else:
+        candidates_f='candidates-ext.txt'
+    '''
+
+    if test_id == 1 or test_id == 2:
+        candidates_f='candidates' + str(task_id) + '.txt'
+    else:
+        candidates_f='candidates-ext' + str(task_id) + '.txt'
+    
     with open(os.path.join(data_dir,candidates_f)) as f:
         for i,line in enumerate(f):
             candid_dic[line.strip().split(' ',1)[1]] = i
@@ -57,46 +83,67 @@ def tokenize(sent):
         result=result[:-1]
     return result
 
+def load_dialog_test_data(data_dir, task_id, test_id):
+    assert task_id > 0 and task_id < 6
 
-# def parse_dialogs(lines,candid_dic):
-#     '''
-#         Parse dialogs provided in the babi tasks format
-#     '''
-#     data=[]
-#     context=[]
-#     u=None
-#     r=None
-#     for line in lines:
-#         line=str.lower(line.strip())
-#         if line:
-#             nid, line = line.split(' ', 1)
-#             nid = int(nid)
-#             if '\t' in line:
-#                 u, r = line.split('\t')
-#                 u = tokenize(u)
-#                 r = tokenize(r)
-#                 # temporal encoding, and utterance/response encoding
-#                 u.append('$u')
-#                 u.append('#'+str(nid))
-#                 r.append('$r')
-#                 r.append('#'+str(nid))
-#                 context.append(u)
-#                 context.append(r)
-#             else:
-#                 r=tokenize(line)
-#                 r.append('$r')
-#                 r.append('#'+str(nid))
-#                 context.append(r)
-#         else:
-#             context=[x for x in context[:-2] if x]
-#             u=u[:-2]
-#             r=r[:-2]
-#             key=' '.join(r)
-#             if key in candid_dic:
-#                 r=candid_dic[key]
-#                 data.append((context, u,  r))
-#             context=[]
-#     return data
+    files = os.listdir(data_dir)
+    files = [os.path.join(data_dir, f) for f in files]
+    s = '-dialog-task{}'.format(task_id)
+    t = 'tst_' + str(test_id)
+    test_file = [f for f in files if s in f and t in f][0]
+    test_data = get_test_dialogs(test_file)
+    return test_data
+    
+def get_test_dialogs(f):
+    '''Given a file name, read the file, retrieve the dialogs, and then convert the sentences into a single dialog.
+    If max_length is supplied, any stories longer than max_length tokens will be discarded.
+    '''
+    with open(f) as f:
+        return parse_test_dialogs(f.readlines())
+
+def parse_test_dialogs(lines):
+    '''
+        Parse dialogs provided in the babi tasks format
+    '''
+    data=[]
+    context=[]
+    u=None
+    r=None
+    a=-1
+    dialog_id=0
+    for line in lines:
+        line=line.strip()
+        if line:
+            nid, line = line.split(' ', 1)
+            nid = int(nid)
+            if '\t' in line:
+                u, r = line.split('\t')
+                u = tokenize(u)
+                r = tokenize(r)
+                # temporal encoding, and utterance/response encoding
+                # data.append((context[:],u[:],candid_dic[' '.join(r)]))
+                # data.append((context[:],u[:],a,dialog_id))
+                u.append('$u')
+                u.append('#'+str(nid))
+                r.append('$r')
+                r.append('#'+str(nid))
+                context.append(u)
+                context.append(r)
+            else:
+                r=tokenize(line)
+                r.append('$r')
+                r.append('#'+str(nid))
+                context.append(r)
+        else:
+            data.append((context[:-2],u[:],a,dialog_id))
+            # clear context
+            u=None
+            r=None
+            a=None
+            context=[]
+            dialog_id=dialog_id+1
+            
+    return data
 
 def parse_dialogs_per_response(lines,candid_dic):
     '''
