@@ -178,11 +178,12 @@ def anonymize_data_task(inputfile, outputfile, mapfile, train):
     out_file.write(json.dumps(all_data, ensure_ascii=False))
     out_file.close()
 
-    map_file = open(mapfile, 'w')
-    map_file.write(json.dumps(dialog_id_map) + "\n")
-    map_file.write(json.dumps(candidate_id_map) + "\n")
-    map_file.write(json.dumps(candidate_dialog_map) + "\n")
-    map_file.close()
+    map_file1 = open(mapfile+'_dialog_id.txt', 'w')
+    map_file2 = open(mapfile+'_candidate_id.txt', 'w')
+    map_file1.write(json.dumps(dialog_id_map) + "\n")
+    map_file2.write(json.dumps(candidate_id_map) + "\n")
+    map_file1.close()
+    map_file2.close()
 
 def anonymize_candidates(inputfile, outputfile):
     fd_in = open(inputfile, 'rb')
@@ -255,7 +256,7 @@ def anonymize_train_data():
     for i, file in enumerate(files_list):
         inputfile = "../data/train/" + file
         outputfile = "../data/train/anon/" + file
-        mapfile = "../data/train/maps/" + file
+        mapfile = "../data/train/maps/task" + str(i+1)
         anonymize_data_task(inputfile,outputfile,mapfile,train = True)
         candidate_in = "../data/train/candidates" + str(i+1) + ".txt"
         candidate_out = "../data/train/anon/candidates" + str(i+1) + ".txt"
@@ -293,7 +294,7 @@ def anonymize_test_data():
             base = "tst" + str((i+5)/5) + "/"
         inputfile = "../data/test/" + base + file
         outputfile = "../data/test/" + base + "anon/" + file
-        mapfile = "../data/test/" + base + "maps/" + file
+        mapfile = "../data/test/" + base + "maps/task" +str(task) 
         anonymize_data_task(inputfile,outputfile,mapfile,train = False)
         if i < 10:
             continue
