@@ -44,29 +44,32 @@ if __name__ == '__main__':
             # Populate FileList
             fileList = [f for f in resultFiles if ("tst-" + str(test)) in f and ("task-" + str(task)) in f]
             
+            prob_list = {}
             for file in fileList:
                 fd = open(file, 'rb')
                 json_data = json.load(fd)
                 fd.close()
 
-                prob_list = {}
                 for story in json_data:
                     dialog_id = story['dialog-id']
                     if dialog_id not in prob_list:
                         prob_list[dialog_id] = {}
                         for i, cand in enumerate(story['ranked-candidates']):
-                            prob_list[dialog_id][cand] = story['scores'][i]
-                    else:
-                        for i, cand in enumerate(story['ranked-candidates']):
-                            prob_list[dialog_id][cand] += cand['scores'][i]
-                rank_list = {}
-                for dialog in prob_list:
-                    rank_list[dialog] = []
-                    for cand in prob_list[dialog]:
-                        rank_list[dialog].append((cand, prob_list[dialog][cand]))
-                    rank_list[dialog] = sorted(rank_list[dialog], key=lambda x: x[1], reverse=True)
-                    for i, cand in enumerate(rank_list[dialog]):
-                        prob_list[dialog][cand[0]] = i
+                            if cand in prob_list[dialog_id]:
+                                prob_list[dialog_id][cand] += story['scores'][i]
+                            else:
+                                prob_list[dialog_id][cand] = story['scores'][i] 
+            rank_list = {}
+            for dialog in prob_list:
+                rank_list[dialog] = []
+                for cand in prob_list[dialog]:
+                    rank_list[dialog].append((cand, prob_list[dialog][cand]))
+                rank_list[dialog] = sorted(rank_list[dialog], key=lambda x: x[1], reverse=True)
+                for i, cand in enumerate(rank_list[dialog]):
+                    prob_list[dialog][cand[0]] = i
+                    
+            if len(prob_list) == 0:
+                continue
 
             # Open Anonymised File
             file_index = (task-1) + (test-1)*5
@@ -92,7 +95,8 @@ if __name__ == '__main__':
                         rank = len(prob_list[dialog_id]) + 1
                     else:
                         rank = prob_list[dialog_id][cand]
-                    temp_list.append((candidate_id_map[str(dialog_id)][cand], rank))
+                    # temp_list.append((candidate_id_map[str(dialog_id)][cand], rank))
+                    temp_list.append((cand, rank))
                 temp_list = sorted(temp_list, key=lambda x: x[1])
                 for i, cand_id in enumerate(temp_list):
                     data['lst_candidate_id'].append({"candidate_id":cand_id[0], "rank":i+1})
